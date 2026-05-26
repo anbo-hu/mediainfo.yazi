@@ -296,40 +296,29 @@ function M:preload(job)
 			"-y",
 			tostring(cache_img_url),
 		}):output()
-		-- NOTE: Some audio types doesn't have cover image -> error ""
-		if
-			(
-				audio_preload_output
-				and audio_preload_output.stderr ~= nil
-				and audio_preload_output.stderr ~= ""
-				and not audio_preload_output.stderr:find("Output file.*does not contain any stream")
-			) or audio_preload_err
-		then
+		cache_img_url_cha = cache_img_url and fs.cha(cache_img_url)
+		if audio_preload_err then
 			ya.dbg("mediainfo", audio_preload_err)
-			ya.dbg("mediainfo", audio_preload_output and audio_preload_output.stderr)
 			err_msg = err_msg
 				.. string.format("Failed to start `%s`.\n Do you have `%s` installed?\n", "ffmpeg", "ffmpeg")
-		else
-			cache_img_url_cha, _ = fs.cha(cache_img_url)
-			if not cache_img_url_cha then
-				-- NOTE: Workaround case audio has no cover image. Prevent regenerate preview image
-				audio_preload_output, audio_preload_err = require("magick")
-					.with_limit()
-					:arg({
-						"-size",
-						"1x1",
-						"canvas:none",
-						string.format("PNG32:%s", cache_img_url),
-					})
-					:output()
-				if
-					(audio_preload_output and audio_preload_output.stderr ~= nil and audio_preload_output.stderr ~= "")
-					or audio_preload_err
-				then
-					ya.dbg("mediainfo", audio_preload_err or (audio_preload_output and audio_preload_output.stderr))
-					err_msg = err_msg
-						.. string.format("Failed to start `%s`.\n Do you have `%s` installed?\n", "magick", "magick")
-				end
+		elseif not cache_img_url_cha or cache_img_url_cha.len <= 0 then
+			-- NOTE: Workaround case audio has no cover image. Prevent regenerate preview image
+			audio_preload_output, audio_preload_err = require("magick")
+				.with_limit()
+				:arg({
+					"-size",
+					"1x1",
+					"canvas:none",
+					string.format("PNG32:%s", cache_img_url),
+				})
+				:output()
+			if
+				(audio_preload_output and audio_preload_output.stderr ~= nil and audio_preload_output.stderr ~= "")
+				or audio_preload_err
+			then
+				ya.dbg("mediainfo", audio_preload_err or (audio_preload_output and audio_preload_output.stderr))
+				err_msg = err_msg
+					.. string.format("Failed to start `%s`.\n Do you have `%s` installed?\n", "magick", "magick")
 			end
 		end
 	end
